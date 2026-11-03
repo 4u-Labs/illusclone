@@ -1,0 +1,30 @@
+{
+  "name": "IllustratorClone Pro",
+  "short_name": "IllustratorClone",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#262626",
+  "theme_color": "#262626",
+  "description": "IllustratorClone Pro: Editor de Ilustração e Design Vetorial Profissional Online e Offline.",
+  "icons": [
+    {
+      "src": "images/manifest/192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "images/manifest/512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "images/manifest/maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

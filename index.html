@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IllustratorClone Pro - Editor Gráfico Vetorial Online</title>
+  <meta name="description" content="IllustratorClone Pro: Editor profissional de ilustração e design vetorial em WebAssembly, 100% no navegador, com suporte a SVG, PDF, IA e PWA da 4U.IA.BR.">
+  <link rel="canonical" href="https://4u.ia.br/app/illusclone/">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="images/manifest/192x192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#262626">
+
+  <!-- FontAwesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <link rel="modulepreload" href="./vectorcraft-web-b86a97bd7d399e62.js?v=2.1.2">
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #262626;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    #vectorcraft_canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    }
+    #vectorcraft_loading {
+      position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 0 16px; text-align: center; color: #b8b8b8; font: 14px system-ui, sans-serif; pointer-events: auto; z-index: 10;
+    }
+    #vectorcraft_loading .spinner {
+      width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #f59e0b; border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Cabeçalho independente: o canvas começa abaixo da altura medida. */
+    #illusclone-header-actions {
+      position:fixed;inset:0 0 auto;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+      gap:10px 20px;padding:8px 16px;min-height:53px;
+      background:#242426;border-bottom:1px solid #454548;color:#f4f4f5;
+    }
+    .app-brand {display:flex;align-items:center;gap:10px;min-width:0;font-size:14px;letter-spacing:.1px;}
+    #app-corner-icon {display:block;width:30px;height:30px;border-radius:6px;flex:none;}
+    .header-controls {display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+    .header-action-btn {display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 12px;border:1px solid #525258;border-radius:6px;background:#333336;color:#ededf0;font:500 12px/1 system-ui,sans-serif;white-space:nowrap;text-decoration:none;cursor:pointer;transition:background .15s,border-color .15s;}
+    .header-action-btn:hover {background:#424247;border-color:#83838d;}
+    .header-action-btn i {font-size:13px;}
+    .btn-donate {background:transparent;color:#d4d4d8;border-color:transparent;}
+    .btn-donate:hover {background:#333336;border-color:#525258;}
+    .btn-pwa {background:#333336;}
+    .lang-switch-group {display:inline-flex;align-items:center;height:36px;padding:3px;gap:2px;border:1px solid #525258;border-radius:6px;background:#1c1c1f;}
+    .lang-pill {display:flex;align-items:center;justify-content:center;min-width:34px;height:28px;padding:0 8px;border:0;border-radius:3px;background:transparent;color:#bcbcc4;font:600 11px system-ui,sans-serif;cursor:pointer;}
+    .lang-pill:hover {background:#38383e;color:#fff;}
+    .lang-pill.active {background:#e4e4e7;color:#202023;}
+    @media(max-width:600px) {
+      #illusclone-header-actions {padding:8px 10px;gap:8px;}
+      .app-brand {flex-basis:100%;}
+      .header-controls {width:100%;justify-content:flex-start;gap:6px;}
+      .header-action-btn {padding:0 10px;}
+    }
+
+    /* ================= MODAL AJUDA (ESTILO IDÊNTICO AO PHOTOCLONE) ================= */
+    .pc-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 99999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .pc-modal-backdrop.show {
+      display: flex;
+    }
+    .pc-modal-card {
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+      color: #f4f4f5;
+      overflow: hidden;
+      animation: modalScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes modalScale {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .pc-modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid #27272a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #202024;
+    }
+    .pc-modal-header h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .pc-modal-close {
+      background: transparent;
+      border: none;
+      color: #a1a1aa;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .pc-modal-close:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .pc-modal-body {
+      padding: 18px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    /* Redes Sociais no Help (2 Colunas, exatamente como no PhotoClone) */
+    .social-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .social-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .social-link:hover {
+      background: #3f3f46;
+      border-color: #f59e0b;
+      transform: translateY(-2px);
+    }
+    .social-link i { font-size: 18px; }
+    .social-yt:hover i { color: #ef4444; }
+    .social-ig:hover i { color: #ec4899; }
+    .social-fb:hover i { color: #3b82f6; }
+    .social-x:hover i { color: #e2e8f0; }
+    .social-in:hover i { color: #0ea5e9; }
+    .social-gh:hover i { color: #c084fc; }
+    .social-blog:hover i { color: #10b981; }
+    .social-alt:hover i { color: #f59e0b; }
+    :is(button,a,input,select,summary,[tabindex]):focus-visible {outline:3px solid #fbbf24 !important;outline-offset:3px;}
+    #vectorcraft_canvas {top:var(--app-header-height,52px);height:calc(100% - var(--app-header-height,52px));}
+    #vectorcraft_loading {top:var(--app-header-height,52px);background:#262626;}
+    #boot-retry[hidden] {display:none;}
+    dialog.pc-modal-backdrop {margin:0;border:0;max-width:none;max-height:none;width:100%;height:100%;color:#fff;}
+    dialog.pc-modal-backdrop[open] {display:flex;}
+    dialog::backdrop {background:#0008;}
+    .pc-modal-card {max-height:calc(100dvh - 32px);display:flex;flex-direction:column;}
+    .pc-modal-body {min-height:0;max-height:none;}
+    #practical-help h4 {margin:16px 0 6px;}
+    #practical-help p, #practical-help li {font-size:13px;line-height:1.6;}
+    details summary {cursor:pointer;padding:12px 0;color:#fbbf24;}
+    #restart-dialog {width:min(460px,calc(100% - 32px));border:1px solid #52525b;border-radius:12px;background:#18181b;color:#fafafa;padding:22px;}
+    #restart-dialog p {line-height:1.6;}
+    @media(max-width:540px){.social-grid {grid-template-columns:1fr;}}
+    @media(prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
+  </style>
+
+  <script>
+    // ================= SISTEMA BILINGUE (PT / EN) & DETECÇÃO =================
+    const i18n = {
+      pt: {
+        docTitle: "IllustratorClone Pro - Editor Gráfico Vetorial Online",
+        loading: "Carregando IllustratorClone Pro (WebAssembly / GPU)...",
+        donate: "Apoiar",
+        pwa: "Instalar App",
+        help: "Ajuda",
+        helpModalTitle: "Sobre o IllustratorClone & 4U.IA.BR",
+        versionTag: "Editor WebAssembly & PWA",
+        helpDesc: "O IllustratorClone Pro é uma poderosa suíte de design e ilustração vetorial profissional que roda inteiramente no seu navegador com aceleração de hardware (WebGPU/WebGL). Compatível com arquivos vetoriais, pranchetas múltiplas, caneta Bézier, Pathfinder e exportação em SVG/PDF.",
+        basedOn: "💡 <strong>Ecossistema 4U.IA.BR:</strong> O maior ecossistema de web apps do Brasil. Tecnologia de ponta, soberania de dados e ferramentas livres.",
+        socialTitle: "Conecte-se com a 4U.IA.BR:",
+        appStore: "Loja de Apps",
+        support: "Central de Ajuda"
+      },
+      en: {
+        docTitle: "IllustratorClone Pro - Online Vector Graphics Editor",
+        loading: "Loading IllustratorClone Pro (WebAssembly / GPU)...",
+        donate: "Donate",
+        pwa: "Install App",
+        help: "Help",
+        helpModalTitle: "About IllustratorClone & 4U.IA.BR",
+        versionTag: "WebAssembly editor & PWA",
+        helpDesc: "IllustratorClone Pro is a powerful vector illustration suite that runs entirely in your browser with hardware acceleration (WebGPU/WebGL). Features full Bézier pen tools, Pathfinder booleans, multiple artboards, and rich SVG/PDF import and export.",
+        basedOn: "💡 <strong>4U.IA.BR Ecosystem:</strong> Brazil's premier web apps ecosystem. Cutting-edge technology, privacy and open-source tools.",
+        socialTitle: "Connect with 4U.IA.BR:",
+        appStore: "App Store",
+        support: "Help Center"
+      }
+    };
+
+    // 1. Determinação de idioma: preferência salva OU idioma do navegador
+    let storedLang = null;
+    try {storedLang=localStorage.getItem('illusclone_lang');} catch(error) {}
+    if (!['pt','en'].includes(storedLang)) storedLang=null;
+    let browserIsPt = ((navigator.language || navigator.userLanguage || 'pt').toLowerCase().startsWith('pt'));
+    let currentLang = storedLang || (browserIsPt ? 'pt' : 'en');
+
+    // 2. Aplicar configuração de idioma antes do boot do WASM
+    const targetLocale = (currentLang === 'pt') ? 'pt-BR' : 'en-US';
+    try {
+      Object.defineProperty(navigator, 'language', { get: () => targetLocale, configurable: true });
+      Object.defineProperty(navigator, 'languages', { get: () => [targetLocale, 'en'], configurable: true });
+    } catch (e) {}
+
+    // Sincronizar preferências persistentes no localStorage
+    try {
+      let wasmCode = (currentLang === 'pt') ? 'pt-br' : 'en';
+      let prefs = JSON.parse(localStorage.getItem('vectorcraft.preferences') || '{}');
+      prefs.interfaceLanguage = wasmCode;
+      localStorage.setItem('vectorcraft.preferences', JSON.stringify(prefs));
+    } catch(e) {}
+    try {
+      let wasmCode = (currentLang === 'pt') ? 'pt-br' : 'en';
+      let prefs = JSON.parse(localStorage.getItem('illustratorclone.preferences') || '{}');
+      prefs.interfaceLanguage = wasmCode;
+      localStorage.setItem('illustratorclone.preferences', JSON.stringify(prefs));
+    } catch(e) {}
+
+  </script>
+
+  <script type="module" src="./boot.js?v=2.1.2"></script>
+</head>
+<body>
+  <!-- Editor vetorial -->
+  
+
+  <canvas id="vectorcraft_canvas"></canvas>
+  
+  <div id="vectorcraft_loading">
+    <div class="spinner"></div>
+    <span id="loading-text" role="status" aria-live="polite">Carregando IllustratorClone Pro&hellip;</span>
+    <progress id="loading-progress" aria-label="Download do editor" style="width:min(360px,90%);margin:16px 0"></progress>
+    <p id="loading-detail" style="max-width:440px;line-height:1.5">Na primeira abertura, o editor baixa aproximadamente 49 MB. Os arquivos ficam disponíveis para uso offline após a instalação completa.</p>
+    <button id="boot-retry" class="header-action-btn" hidden>Tentar novamente</button>
+  </div>
+
+  <!-- Cabeçalho próprio, separado dos menus desenhados pelo editor -->
+  <header id="illusclone-header-actions" aria-label="Ações do aplicativo">
+    <div class="app-brand"><img id="app-corner-icon" src="favicon.png" alt=""><strong>IllustratorClone</strong></div>
+    
+    <div class="header-controls">
+<button id="btn-help" aria-haspopup="dialog" aria-controls="modal-help" class="header-action-btn btn-help" onclick="openHelpModal()" title="Ajuda: importar, salvar e exportar">
+      <i class="fas fa-circle-question" style="color: #f59e0b;"></i>
+      <span id="txt-help">Ajuda</span>
+    </button>
+<div class="lang-switch-group" title="Alterar Idioma / Switch Language">
+      <button type="button" id="btn-lang-pt" class="lang-pill" onclick="setLanguage('pt')">PT</button>
+      <button type="button" id="btn-lang-en" class="lang-pill" onclick="setLanguage('en')">EN</button>
+    </div>
+<a href="https://www.paypal.com/ncp/payment/L7YRCS984T33N" target="_blank" rel="noopener noreferrer" class="header-action-btn btn-donate" title="Apoie o projeto via PayPal">
+      <i class="fab fa-paypal"></i>
+      <span id="txt-donate">Apoiar</span>
+    </a>
+<button id="btn-pwa-install" class="header-action-btn btn-pwa" style="display: none;" title="Instalar aplicativo no computador ou celular">
+      <i class="fas fa-download"></i>
+      <span id="txt-pwa">Instalar App</span>
+    </button>
+    </div>
+  </header>
+
+  <!-- ================= MODAL AJUDA E REDES SOCIAIS (ESTILO PHOTOCLONE) ================= -->
+  <dialog id="modal-help" class="pc-modal-backdrop" aria-labelledby="txt-help-modal-title" onclick="if(event.target===this) closeHelpModal()">
+    <div class="pc-modal-card">
+      <div class="pc-modal-header">
+        <h3>
+          <i class="fas fa-circle-question" style="color: #f59e0b;"></i>
+          <span id="txt-help-modal-title">Sobre o IllustratorClone & 4U.IA.BR</span>
+        </h3>
+        <button class="pc-modal-close" id="help-close" aria-label="Fechar ajuda" onclick="closeHelpModal()" autofocus>&times;</button>
+      </div>
+      <div class="pc-modal-body">
+        <section id="practical-help"></section>
+        <details><summary id="about-summary">Sobre o app e links</summary>
+        <p id="offline-status" role="status" style="font-size:12px;color:#a1a1aa">Verificando arquivos para uso offline…</p>
+        
+        <div style="text-align: center; margin-bottom: 16px;">
+          <img src="favicon.png" alt="IllustratorClone" style="width: 56px; height: 56px; border-radius: 12px; margin-bottom: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+          <h4 style="margin: 0; font-size: 17px; color: #ffffff;">IllustratorClone Pro</h4>
+          <span style="font-size: 11px; color: #a1a1aa;" id="txt-version-tag">Editor WebAssembly & PWA</span>
+        </div>
+
+        <p style="font-size: 13px; color: #d4d4d8; line-height: 1.6;" id="txt-help-desc">
+          O IllustratorClone Pro é uma poderosa suíte de design e ilustração vetorial profissional que roda inteiramente no seu navegador com aceleração de hardware (WebGPU/WebGL). Compatível com arquivos vetoriais, pranchetas múltiplas, caneta Bézier, Pathfinder e exportação em SVG/PDF.
+        </p>
+
+        <div style="background: #202024; border: 1px solid #27272a; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #a1a1aa; line-height: 1.5; margin-bottom: 16px;" id="txt-based-on">
+          💡 <strong>Ecossistema 4U.IA.BR:</strong> O maior ecossistema de web apps do Brasil. Tecnologia de ponta e soberania de dados.
+        </div>
+
+        <h5 style="margin: 0 0 10px 0; font-size: 13px; color: #e4e4e7;" id="txt-social-title">Conecte-se com a 4U.IA.BR:</h5>
+        
+        <div class="social-grid">
+          <a href="https://github.com/4u-Labs" target="_blank" rel="noopener noreferrer" class="social-link social-gh" title="GitHub (4u-Labs)">
+            <i class="fab fa-github" style="color: #c084fc;"></i>
+            <span>GitHub</span>
+          </a>
+          <a href="https://4u-labs.github.io/" target="_blank" rel="noopener noreferrer" class="social-link social-blog" title="Blog Oficial (4u-labs.github.io)">
+            <i class="fas fa-terminal" style="color: #10b981;"></i>
+            <span>Blog Dev</span>
+          </a>
+          <a href="https://alternativeto.net/user/4u-ia-br/added/" target="_blank" rel="noopener noreferrer" class="social-link social-alt" title="AlternativeTo (4U.IA.BR)">
+            <i class="fas fa-cubes" style="color: #f59e0b;"></i>
+            <span>AlternativeTo</span>
+          </a>
+          <a href="https://www.youtube.com/@fbr4g4" target="_blank" rel="noopener noreferrer" class="social-link social-yt" title="YouTube (@fbr4g4)">
+            <i class="fab fa-youtube" style="color: #ef4444;"></i>
+            <span>YouTube</span>
+          </a>
+          <a href="https://www.instagram.com/fbr4g4/" target="_blank" rel="noopener noreferrer" class="social-link social-ig" title="Instagram (@fbr4g4)">
+            <i class="fab fa-instagram" style="color: #ec4899;"></i>
+            <span>Instagram</span>
+          </a>
+          <a href="https://www.facebook.com/fbr4g4/" target="_blank" rel="noopener noreferrer" class="social-link social-fb" title="Facebook (fbr4g4)">
+            <i class="fab fa-facebook" style="color: #3b82f6;"></i>
+            <span>Facebook</span>
+          </a>
+          <a href="https://x.com/fbr4g4" target="_blank" rel="noopener noreferrer" class="social-link social-x" title="X (@fbr4g4)">
+            <i class="fab fa-x-twitter" style="color: #e2e8f0;"></i>
+            <span>X (Twitter)</span>
+          </a>
+          <a href="https://www.linkedin.com/in/fbr4g4/" target="_blank" rel="noopener noreferrer" class="social-link social-in" title="LinkedIn (Fabiano Braga)">
+            <i class="fab fa-linkedin" style="color: #0ea5e9;"></i>
+            <span>LinkedIn</span>
+          </a>
+        </div>
+
+        <div style="margin-top: 18px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+          <a href="https://4u.ia.br/loja/index.php" target="_blank" rel="noopener noreferrer" class="header-action-btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; font-weight: 700; padding: 6px 14px; height: 32px;">
+            <i class="fas fa-store"></i> <span id="txt-app-store">Loja de Apps</span>
+          </a>
+          <a href="https://4u.ia.br/suporte.html" target="_blank" rel="noopener noreferrer" class="header-action-btn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; font-weight: 600; padding: 6px 14px; height: 32px;">
+            <i class="fas fa-headset"></i> <span id="txt-support">Central de Ajuda</span>
+          </a>
+        </div>
+
+        </details>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    // ================= APLICAÇÃO DE IDIOMA NA UI =================
+    function applyLanguage(lang) {
+      currentLang = lang;
+      const dict = i18n[lang];
+      document.title = dict.docTitle;
+      document.getElementById('loading-text').textContent = dict.loading;
+      document.getElementById('txt-donate').textContent = dict.donate;
+      document.getElementById('txt-pwa').textContent = dict.pwa;
+      document.getElementById('txt-help').textContent = dict.help;
+      document.getElementById('txt-help-modal-title').textContent = dict.helpModalTitle;
+      document.getElementById('txt-version-tag').textContent = dict.versionTag;
+      document.getElementById('txt-help-desc').textContent = dict.helpDesc;
+      document.getElementById('txt-based-on').innerHTML = dict.basedOn;
+      document.getElementById('txt-social-title').textContent = dict.socialTitle;
+      document.getElementById('txt-app-store').textContent = dict.appStore;
+      document.getElementById('txt-support').textContent = dict.support;
+
+      // Atualiza visual das pílulas
+      document.getElementById('btn-lang-pt').classList.toggle('active', lang === 'pt');
+      document.getElementById('btn-lang-en').classList.toggle('active', lang === 'en');
+      document.documentElement.lang = (lang === 'pt') ? 'pt-BR' : 'en';
+    }
+
+    function setLanguage(lang) {
+      if(!['pt','en'].includes(lang) || lang===currentLang) return;
+      window.requestEditorRestart(lang);
+    }
+
+    // Inicializa textos da UI
+    applyLanguage(currentLang);
+
+    // ================= MODAL AJUDA =================
+    let helpOpener=null;
+    window.openHelpModal = function() {
+      const modal=document.getElementById('modal-help');helpOpener=document.activeElement;
+      const details = modal.querySelector('details');
+      if (details) details.open = true;
+      if(!modal.open) modal.showModal();document.getElementById('help-close').focus();
+    };
+    window.closeHelpModal = function() {document.getElementById('modal-help').close();};
+    document.getElementById('modal-help').addEventListener('close',()=>{if(helpOpener?.isConnected)helpOpener.focus();});
+
+    // ================= PWA INSTALL PROMPT & SERVICE WORKER =================
+    let deferredPrompt = null;
+    const btnPwa = document.getElementById('btn-pwa-install');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (btnPwa) btnPwa.style.display = 'inline-flex';
+    });
+
+    if (btnPwa) {
+      btnPwa.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          btnPwa.style.display = 'none';
+        }
+        deferredPrompt = null;
+      });
+    }
+
+    window.addEventListener('appinstalled', () => {
+      if (btnPwa) btnPwa.style.display = 'none';
+      deferredPrompt = null;
+    });
+
+    // Registrar Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => {
+            const label=document.getElementById('offline-status');
+            const check=()=>{
+              if(!reg.active) return;
+              const channel=new MessageChannel();
+              channel.port1.onmessage=({data})=>{label.textContent=data.ready?'Arquivos do editor disponíveis offline. Ícones externos podem exigir conexão.':'Arquivos offline incompletos. Mantenha a conexão e recarregue para tentar novamente.';channel.port1.close();};
+              reg.active.postMessage({type:'CHECK_OFFLINE'},[channel.port2]);
+            };
+            const observe=()=>{const installing=reg.installing;if(installing) installing.addEventListener('statechange',()=>{
+              if(installing.state==='redundant')label.textContent='Falha ao preparar o modo offline. Verifique a conexão e o espaço disponível.';
+              if(installing.state==='installed' && reg.waiting)label.textContent='Atualização pronta. Feche as abas deste app e abra novamente para ativar.';
+              if(installing.state==='activated')check();
+            });};
+            observe();reg.addEventListener('updatefound',observe);
+            navigator.serviceWorker.addEventListener('controllerchange',check);
+            if(reg.waiting)label.textContent='Atualização pronta. Feche as abas deste app e abra novamente para ativar.';
+            else check();
+          })
+          .catch(err => {console.warn('Falha no Service Worker:', err);document.getElementById('offline-status').textContent='Modo offline indisponível. Verifique a conexão e reabra o app.';});
+      });
+    }
+  </script>
+  <aside id="transfer-panel" hidden aria-label="Transferência do VectorAI" style="position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:1000;background:#18181b;color:#fff;border:1px solid #71717a;border-radius:10px;padding:14px;width:min(540px,calc(100% - 24px));box-shadow:0 8px 32px #0009;">
+    <p id="transfer-status" role="status" aria-live="polite" style="margin:0 0 12px;line-height:1.5"></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="transfer-retry" class="header-action-btn" style="height:36px">Tentar novamente</button>
+      <button id="transfer-download" class="header-action-btn" style="height:36px">Baixar cópia SVG</button>
+      <button id="transfer-confirm" class="header-action-btn" style="height:36px" disabled>O arquivo abriu</button>
+    </div>
+  </aside>
+  <dialog id="restart-dialog" aria-labelledby="restart-title">
+    <h3 id="restart-title">Salvar antes de reiniciar</h3>
+    <p id="restart-message">Salve seu documento pelo menu do editor antes de continuar. Reiniciar pode descartar alterações não salvas.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button id="restart-cancel" class="header-action-btn" autofocus>Continuar editando</button>
+      <button id="restart-confirm" class="header-action-btn">Já salvei — reiniciar</button>
+    </div>
+    <p id="restart-error" role="alert"></p>
+  </dialog>
+  <script src="./usability.js?v=2.1.2"></script>
+  <script src="./transfer.js?v=2.1.2"></script>
+</body>
+</html>
